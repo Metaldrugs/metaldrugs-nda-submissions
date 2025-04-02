@@ -1,1 +1,42 @@
+# .github/workflows/nda-review-handler.yml
+
+name: Handle NDA Review Requests
+
+on:
+  repository_dispatch:
+    types: [review_request_received]
+
+jobs:
+  create-review-issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create GitHub Issue for Review Request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const name = context.payload.client_payload.name || "No name provided"
+            const email = context.payload.client_payload.email || "No email provided"
+            const institution = context.payload.client_payload.institution || "No institution provided"
+
+            const issueTitle = `New Review Request: ${name} from ${institution}`
+            const issueBody = `
+**Reviewer Info**
+- **Name:** ${name}
+- **Email:** ${email}
+- **Institution:** ${institution}
+
+---
+
+Please verify NDA completion and grant GitHub access if approved.
+            `.trim()
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: issueBody,
+              labels: ['review-request']
+            })
 
