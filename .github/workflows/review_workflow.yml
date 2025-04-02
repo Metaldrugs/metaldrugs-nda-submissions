@@ -1,0 +1,51 @@
+name: Handle Review Request
+
+on:
+  repository_dispatch:
+    types: [review_request_received]
+
+jobs:
+  process-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract Submission Details
+        run: |
+          echo "Reviewer Name: ${{ github.event.client_payload.name }}"
+          echo "Reviewer Email: ${{ github.event.client_payload.email }}"
+          echo "Paper: ${{ github.event.client_payload.paper }}"
+          echo "Reason: ${{ github.event.client_payload.reason }}"
+
+      - name: Send NDA Email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "[MDC] NDA Required for Manuscript Review"
+          to: ${{ github.event.client_payload.email }}
+          from: "MetalDrug MDC <${{ secrets.EMAIL_USERNAME }}>"
+          body: |
+            Hi ${{ github.event.client_payload.name }},
+
+            Thank you for your interest in reviewing our MDC publication titled:
+            "${{ github.event.client_payload.paper }}"
+
+            Before access is granted, we require a signed NDA.
+
+            Please download and sign the NDA here:
+            https://metaldrug.com/KT-MetalDrug-NDA.pdf
+
+            Then upload the signed copy (PDF) to the following GitHub repository:
+            https://github.com/Metaldrugs/nda-submissions
+
+            Format: nda-[paper-title]-[your-email].pdf
+
+            Once we confirm receipt and review the file, you will receive an invite to the private manuscript repo.
+
+            Thank you,
+            Kunfirm Biotech - MetalDrug Division
+
+      - name: Log Request Locally
+        run: |
+          echo "${{ github.event.client_payload.name }} <${{ github.event.client_payload.email }}> requested access to ${{ github.event.client_payload.paper }}" >> reviewers-log.txt
